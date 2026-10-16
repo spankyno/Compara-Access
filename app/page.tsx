@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { AccessIcon } from "@/components/AccessIcon";
 import { Dropzone } from "@/components/Dropzone";
 import { OptionsPanel } from "@/components/OptionsPanel";
 import { Summary } from "@/components/Summary";
@@ -20,8 +21,8 @@ export default function Home() {
   const worker = useRef<Worker | null>(null);
 
   const notify = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 4000); };
-  useEffect(() => { setDark(document.documentElement.classList.contains("dark") || matchMedia("(prefers-color-scheme: dark)").matches); }, []);
-  useEffect(() => { document.documentElement.classList.toggle("dark", dark); }, [dark]);
+  useEffect(() => { setDark(document.documentElement.classList.contains("dark")); }, []);
+  const toggleTheme = () => { const n = !dark; setDark(n); document.documentElement.classList.toggle("dark", n); try { localStorage.setItem("theme", n ? "dark" : "light"); } catch {} };
 
   async function compare() {
     if (!fileA || !fileB) return;
@@ -52,11 +53,12 @@ export default function Home() {
   return (
     <main className="mx-auto max-w-6xl space-y-6 p-4 md:p-8">
       <header className="flex items-center gap-3">
+        <AccessIcon size={48} className="shrink-0" />
         <div className="flex-1">
-          <h1 className="text-2xl font-bold md:text-3xl">Comparador de bases de datos Access</h1>
+          <h1 className="text-2xl font-bold text-access-700 dark:text-access-300 md:text-3xl">Comparador de bases de datos Access</h1>
           <p className="text-sm text-slate-500">🔒 Modo privacidad: los archivos se procesan en tu navegador y nunca se suben ni se guardan.</p>
         </div>
-        <button className="btn-ghost" onClick={() => setDark(!dark)} aria-label="Cambiar tema">{dark ? "☀️" : "🌙"}</button>
+        <button className="btn-ghost" onClick={toggleTheme} aria-label="Cambiar tema">{dark ? "☀️" : "🌙"}</button>
       </header>
 
       {!selected && (
@@ -80,13 +82,22 @@ export default function Home() {
       {progress && (
         <div className="card space-y-2">
           <div className="flex justify-between text-sm"><span>{progress.label}</span><span>{progress.pct}%</span></div>
-          <div className="h-2 overflow-hidden rounded bg-slate-200 dark:bg-slate-800"><div className="h-full bg-indigo-600 transition-all" style={{ width: `${progress.pct}%` }} /></div>
+          <div className="h-2 overflow-hidden rounded bg-slate-200 dark:bg-slate-800"><div className="h-full bg-access-600 transition-all" style={{ width: `${progress.pct}%` }} /></div>
           {!result && <div className="space-y-2 pt-2">{[1, 2, 3].map((i) => <div key={i} className="h-8 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />)}</div>}
         </div>
       )}
 
       {result && !selected && <Summary diffs={result.diffs} onSelect={setSelected} />}
       {selected && <TableDetail diff={selected} onBack={() => setSelected(null)} onExport={(k) => doExport(k, [selected], `comparacion-${selected.name}`)} />}
+
+      {!result && !selected && (
+        <section aria-label="Qué puedes hacer" className="grid gap-3 pt-4 text-sm md:grid-cols-3">
+          {[["Compara datos y esquema", "Registros añadidos, eliminados y modificados, con valor anterior y nuevo de cada campo."],
+            ["Informe en Excel y PDF", "Descarga el informe completo o solo de una tabla concreta."],
+            ["100 % privado", "Tus archivos .accdb y .mdb se procesan en tu navegador y nunca se suben."]].map(([h, d]) => (
+            <div key={h} className="card"><h2 className="font-semibold text-access-700 dark:text-access-300">{h}</h2><p className="mt-1 text-slate-600 dark:text-slate-400">{d}</p></div>))}
+        </section>
+      )}
 
       {toast && <div role="status" className={`fixed bottom-4 right-4 max-w-sm rounded-lg px-4 py-3 text-sm text-white shadow-lg ${toast.ok ? "bg-green-600" : "bg-red-600"}`}>{toast.msg}</div>}
     </main>

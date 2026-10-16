@@ -14,7 +14,7 @@ export function Dropzone({ label, file, onFile }: { label: string; file: File | 
       onDragOver={(e) => { e.preventDefault(); setOver(true); }}
       onDragLeave={() => setOver(false)}
       onDrop={(e) => { e.preventDefault(); setOver(false); accept(e.dataTransfer.files[0]); }}
-      className={`flex min-h-44 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 text-center transition ${over ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950" : "border-slate-300 hover:border-indigo-400 dark:border-slate-700"}`}
+      className={`flex min-h-44 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 text-center transition ${over ? "border-access-500 bg-access-50 dark:bg-access-950" : "border-slate-300 hover:border-access-400 dark:border-slate-700"}`}
     >
       <input ref={ref} type="file" accept=".accdb,.mdb" hidden onChange={(e) => accept(e.target.files?.[0])} />
       <div className="text-sm font-semibold">{label}</div>

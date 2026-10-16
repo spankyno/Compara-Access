@@ -37,7 +37,7 @@ export function TableDetail({ diff, onBack, onExport }: { diff: TableDiff; onBac
         {diff.warnings.map((w) => <div key={w} className="text-amber-600">⚠ {w}</div>)}
       </div>
       <div className="flex gap-1 border-b border-slate-200 dark:border-slate-800">
-        {tabs.map(([k, l, n]) => <button key={k} onClick={() => { setTab(k); setPage(0); }} className={`px-4 py-2 text-sm ${tab === k ? "border-b-2 border-indigo-600 font-semibold" : "text-slate-500"}`}>{l} ({n})</button>)}
+        {tabs.map(([k, l, n]) => <button key={k} onClick={() => { setTab(k); setPage(0); }} className={`px-4 py-2 text-sm ${tab === k ? "border-b-2 border-access-600 font-semibold" : "text-slate-500"}`}>{l} ({n})</button>)}
       </div>
       <div className="flex flex-wrap gap-2">
         <input className="input max-w-xs" placeholder="Buscar…" value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} />

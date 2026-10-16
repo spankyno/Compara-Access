@@ -31,3 +31,13 @@ npm run typecheck
   (columna tipo Id/Código única o cualquier columna única). Se puede forzar en *Opciones avanzadas*.
   Sin clave detectable se usan todas las columnas (solo altas y bajas).
 - PDF: máx. 1000 filas por tabla (Excel incluye todo).
+
+## SEO y metadatos
+- `app/layout.tsx`: título con plantilla, descripción, keywords, canonical, robots, Open Graph, Twitter Cards
+  (`/og-image.png` 1200×630), verificación de Google Search Console, tema (`viewport`) y JSON-LD
+  (`WebApplication`, `WebSite`, `Person` con enlaces a blog, Aitor Hub y contacto).
+- `app/acerca-de/page.tsx`: página «Acerca de» con `AboutPage`, `BreadcrumbList` y `FAQPage`.
+- `app/robots.ts`, `app/sitemap.ts`, `app/manifest.ts`, `app/icon.svg`, `app/apple-icon.png`.
+- Seguimiento: script del dashboard cargado con `next/script` en el layout.
+- Tras desplegar, envía `https://compara-access.vercel.app/sitemap.xml` en Google Search Console
+  y valida las vistas previas con el depurador de Facebook y el Card Validator de X.

@@ -1,6 +1,8 @@
 import type { TableDiff } from "./types";
 
 const fmt = (v: unknown) => (v === null || v === undefined ? "(vacío)" : String(v));
+/** Recorta valores largos para que las columnas del PDF no se ensanchen */
+const trunc = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
 const rowText = (r: Record<string, unknown>) => Object.entries(r).map(([k, v]) => `${k}: ${fmt(v)}`).join(" | ");
 
 function save(blob: Blob, filename: string) {
@@ -56,14 +58,14 @@ export async function exportPdf(diffs: TableDiff[], filename = "comparacion-acce
   autoTable(doc, {
     startY: 28, head: [["Tabla", "Presencia", "Clave", "Añadidos", "Eliminados", "Modificados"]],
     body: diffs.map((d) => [d.name, d.presence === "both" ? "Ambas" : d.presence === "onlyA" ? "Solo A" : "Solo B", d.pk.join(", "), d.added.length, d.removed.length, d.modified.length]),
-    styles: { fontSize: 8 }, headStyles: { fillColor: [79, 70, 229] },
+    styles: { fontSize: 8 }, tableWidth: 269, columnStyles: { 0: { cellWidth: 85 }, 1: { cellWidth: 24 }, 2: { cellWidth: 60 }, 3: { cellWidth: 30 }, 4: { cellWidth: 30 }, 5: { cellWidth: 40 } }, headStyles: { fillColor: [164, 55, 58] },
   });
   const LIMIT = 1000;
   for (const d of diffs) {
     const body: string[][] = [];
-    d.added.forEach((x) => body.push(["Añadido", x.key, "", "", rowText(x.row)]));
-    d.removed.forEach((x) => body.push(["Eliminado", x.key, "", rowText(x.row), ""]));
-    d.modified.forEach((m) => m.changes.forEach((c) => body.push(["Modificado", m.key, c.column, fmt(c.before), fmt(c.after)])));
+    d.added.forEach((x) => body.push(["Añadido", trunc(x.key, 40), "", "", trunc(rowText(x.row), 140)]));
+    d.removed.forEach((x) => body.push(["Eliminado", trunc(x.key, 40), "", trunc(rowText(x.row), 140), ""]));
+    d.modified.forEach((m) => m.changes.forEach((c) => body.push(["Modificado", trunc(m.key, 40), trunc(c.column, 30), trunc(fmt(c.before), 100), trunc(fmt(c.after), 100)])));
     const schema = [...d.colsOnlyA.map((c) => `Columna solo en A: ${c}`), ...d.colsOnlyB.map((c) => `Columna solo en B: ${c}`), ...d.typeDiffs.map((t) => `Tipo distinto en ${t.column}: ${t.a} → ${t.b}`), ...d.warnings];
     if (!body.length && !schema.length) continue;
     doc.addPage(); doc.setFontSize(14); doc.text(d.name, 14, 16);
@@ -71,7 +73,8 @@ export async function exportPdf(diffs: TableDiff[], filename = "comparacion-acce
     if (schema.length) { doc.setFontSize(9); schema.forEach((t) => { doc.text(`• ${t}`, 14, y); y += 5; }); y += 2; }
     if (body.length) autoTable(doc, {
       startY: y, head: [["Cambio", "Clave", "Campo", "Anterior", "Nuevo"]], body: body.slice(0, LIMIT),
-      styles: { fontSize: 7, overflow: "linebreak" }, headStyles: { fillColor: [79, 70, 229] },
+      styles: { fontSize: 7, overflow: "linebreak", cellPadding: 1.5, valign: "top" }, tableWidth: 269,
+      columnStyles: { 0: { cellWidth: 22 }, 1: { cellWidth: 48 }, 2: { cellWidth: 38 }, 3: { cellWidth: 80 }, 4: { cellWidth: 81 } }, headStyles: { fillColor: [164, 55, 58] },
       didParseCell: (h) => { if (h.section === "body") { if (h.column.index === 3) h.cell.styles.textColor = [185, 28, 28]; if (h.column.index === 4) h.cell.styles.textColor = [21, 128, 61]; } },
     });
     if (body.length > LIMIT) { doc.setFontSize(8); doc.text(`… ${body.length - LIMIT} filas más (usa Excel para el detalle completo).`, 14, (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6); }
