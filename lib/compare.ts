@@ -1,3 +1,4 @@
+import { diffColumns, isIgnoredCol, isTableAllowed } from "./schema";
 import type { Cell, CompareOptions, CompareResult, KeyedRow, ModifiedRecord, Row, Snapshot, TableDiff, TableData } from "./types";
 
 const SEP = "\u0001";
@@ -12,11 +13,6 @@ function norm(v: Cell, o: CompareOptions): Cell {
   return s;
 }
 const same = (x: Cell, y: Cell, o: CompareOptions) => norm(x, o) === norm(y, o);
-
-function isIgnoredCol(table: string, col: string, o: CompareOptions) {
-  const t = lc(table), c = lc(col);
-  return o.ignoreColumns.some((x) => { const l = lc(x.trim()); return l === c || l === `${t}.${c}`; });
-}
 
 /** ¿Los valores de estas columnas forman una clave única y sin nulos? */
 function isUnique(rows: Row[], cols: string[]): boolean {
@@ -60,14 +56,13 @@ function indexRows(rows: Row[], pk: string[]): Map<string, Row> {
 function compareTable(name: string, a: TableData, b: TableData, o: CompareOptions): TableDiff {
   const diff: TableDiff = {
     name, presence: "both", pk: [], pkSource: "detectada", added: [], removed: [], modified: [],
-    colsOnlyA: [], colsOnlyB: [], typeDiffs: [], warnings: [],
+    colsOnlyA: [], colsOnlyB: [], rowsA: null, rowsB: null, typeDiffs: [], warnings: [],
   };
-  const colsA = new Map(a.columns.map((c) => [c.name, c.type]));
   const colsB = new Map(b.columns.map((c) => [c.name, c.type]));
   const ig = (c: string) => isIgnoredCol(name, c, o);
-
-  for (const [c, t] of colsA) if (!ig(c)) { if (!colsB.has(c)) diff.colsOnlyA.push(c); else if (colsB.get(c) !== t) diff.typeDiffs.push({ column: c, a: t, b: colsB.get(c)! }); }
-  for (const c of colsB.keys()) if (!ig(c) && !colsA.has(c)) diff.colsOnlyB.push(c);
+  const cd = diffColumns(name, a.columns, b.columns, o);
+  diff.colsOnlyA = cd.colsOnlyA; diff.colsOnlyB = cd.colsOnlyB; diff.typeDiffs = cd.typeDiffs;
+  diff.rowsA = a.rows.length; diff.rowsB = b.rows.length;
 
   const common = a.columns.map((c) => c.name).filter((c) => colsB.has(c) && !ig(c));
   if (common.length === 0) { diff.warnings.push("No hay columnas en común: no se pueden comparar datos."); return diff; }
@@ -101,7 +96,7 @@ export function compareSnapshots(
   a: Snapshot, b: Snapshot, o: CompareOptions,
   onProgress?: (pct: number, table: string) => void,
 ): CompareResult {
-  const allow = (t: string) => !o.ignoreTables.some((x) => lc(x.trim()) === lc(t)) && (o.onlyTables.length === 0 || o.onlyTables.some((x) => lc(x.trim()) === lc(t)));
+  const allow = (t: string) => isTableAllowed(t, o);
   const names = Array.from(new Set([...Object.keys(a), ...Object.keys(b)])).filter(allow).sort((x, y) => x.localeCompare(y));
   const diffs: TableDiff[] = [];
   names.forEach((name, i) => {
@@ -110,7 +105,7 @@ export function compareSnapshots(
     if (ta && tb) diffs.push(compareTable(name, ta, tb, o));
     else diffs.push({
       name, presence: ta ? "onlyA" : "onlyB", pk: [], pkSource: "detectada", added: [], removed: [], modified: [],
-      colsOnlyA: [], colsOnlyB: [], typeDiffs: [], warnings: [`La tabla solo existe en la base de datos ${ta ? "A" : "B"}.`],
+      colsOnlyA: [], colsOnlyB: [], rowsA: ta ? ta.rows.length : null, rowsB: tb ? tb.rows.length : null, typeDiffs: [], warnings: [`La tabla solo existe en la base de datos ${ta ? "A" : "B"}.`],
     });
   });
   onProgress?.(100, "");

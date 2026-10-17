@@ -1,5 +1,5 @@
 import MDBReader from "mdb-reader";
-import type { Cell, Row, Snapshot } from "./types";
+import type { Cell, Meta, Row, Snapshot } from "./types";
 
 /** Convierte cualquier valor devuelto por mdb-reader a un tipo simple y comparable */
 export function normalizeCell(v: unknown): Cell {
@@ -38,4 +38,16 @@ export function readAccess(
     snap[name] = { columns, rows };
   });
   return snap;
+}
+
+/** Lectura rápida: solo columnas y nº de registros (sin cargar los datos) */
+export function readMeta(buffer: Buffer, skipTable?: (name: string) => boolean): Meta {
+  const reader = new MDBReader(buffer);
+  const meta: Meta = {};
+  for (const name of reader.getTableNames({ normalTables: true, systemTables: false, linkedTables: false })) {
+    if (skipTable?.(name)) continue;
+    const table = reader.getTable(name);
+    meta[name] = { columns: table.getColumns().map((c) => ({ name: c.name, type: String(c.type) })), rowCount: table.rowCount };
+  }
+  return meta;
 }

@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import type { Cell, TableDiff } from "@/lib/types";
+import { nf, presenceLabel } from "@/lib/summary";
 
 const PAGE = 50;
 const show = (v: Cell) => (v === null ? <em className="text-slate-400">(vacío)</em> : String(v));
@@ -30,11 +31,15 @@ export function TableDetail({ diff, onBack, onExport }: { diff: TableDiff; onBac
         <button className="btn-ghost" onClick={() => onExport("pdf")}>PDF (esta tabla)</button>
       </div>
       <div className="card space-y-1 text-sm">
-        <div>Clave: <b>{diff.pk.join(", ") || "—"}</b> <span className="text-slate-500">({diff.pkSource})</span></div>
-        {diff.colsOnlyA.length > 0 && <div className="text-red-600">Columnas solo en A: {diff.colsOnlyA.join(", ")}</div>}
-        {diff.colsOnlyB.length > 0 && <div className="text-green-600">Columnas solo en B: {diff.colsOnlyB.join(", ")}</div>}
+        {diff.presence !== "both" && <div className="rounded bg-purple-100 px-3 py-2 font-medium text-purple-900 dark:bg-purple-900 dark:text-purple-100">Esta tabla existe {presenceLabel(diff.presence).toLowerCase()}.</div>}
+        <div className="flex flex-wrap gap-x-6 gap-y-1">
+          <span>Registros en A: <b>{nf(diff.rowsA)}</b></span><span>Registros en B: <b>{nf(diff.rowsB)}</b></span>
+          {diff.presence === "both" && <span>Clave: <b>{diff.pk.join(", ") || "—"}</b> <span className="text-slate-500">({diff.pkSource})</span></span>}
+        </div>
+        {diff.colsOnlyA.length > 0 && <div className="text-red-600">Columnas solo en A: {diff.colsOnlyA.map((c) => `${c.name} (${c.type})`).join(", ")}</div>}
+        {diff.colsOnlyB.length > 0 && <div className="text-green-600">Columnas solo en B: {diff.colsOnlyB.map((c) => `${c.name} (${c.type})`).join(", ")}</div>}
         {diff.typeDiffs.map((t) => <div key={t.column} className="text-amber-600">Tipo distinto en {t.column}: {t.a} → {t.b}</div>)}
-        {diff.warnings.map((w) => <div key={w} className="text-amber-600">⚠ {w}</div>)}
+        {diff.warnings.filter((w) => diff.presence === "both" || !w.startsWith("La tabla solo")).map((w) => <div key={w} className="text-amber-600">⚠ {w}</div>)}
       </div>
       <div className="flex gap-1 border-b border-slate-200 dark:border-slate-800">
         {tabs.map(([k, l, n]) => <button key={k} onClick={() => { setTab(k); setPage(0); }} className={`px-4 py-2 text-sm ${tab === k ? "border-b-2 border-access-600 font-semibold" : "text-slate-500"}`}>{l} ({n})</button>)}

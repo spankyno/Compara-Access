@@ -7,3 +7,12 @@ body { @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100; 
 .btn-primary { @apply btn bg-access-600 text-white hover:bg-access-700; }
 .btn-ghost { @apply btn border border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800; }
 .input { @apply w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 text-sm dark:border-slate-700; }
+
+/* Impresión: solo se imprime el informe (resumen ejecutivo + estructura) */
+@media print {
+  @page { margin: 14mm; }
+  .no-print { display: none !important; }
+  body { background: #fff !important; color: #000 !important; }
+  .card { box-shadow: none !important; break-inside: avoid; }
+  .dark body, .dark .card { background: #fff !important; color: #000 !important; }
+}

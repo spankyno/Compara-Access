@@ -12,6 +12,14 @@ Compara dos bases `.accdb` / `.mdb` y genera un informe de registros **añadidos
 - Sin API Routes. Para añadir autenticación o historial en el futuro basta con crear `app/api/*` y
   guardar solo el `CompareResult` (nunca los archivos).
 
+## Flujo de comparación
+1. **Validación previa**: al pulsar «Comparar», el worker lee solo la estructura (columnas y nº de registros) y muestra
+   un resumen (tablas comunes, solo en A/B, columnas distintas) con avisos suaves; el usuario confirma o cancela.
+2. **Comparación completa** de registros (el worker conserva los archivos en memoria entre ambas fases).
+3. **Dashboard**: Resumen Ejecutivo, «Diferencias de estructura» (desplegable) y lista de tablas con carga progresiva.
+4. **Exportación** (menú «Exportar informe»): PDF compacto (recomendado), PDF completo con índice clicable,
+   Excel (hoja «Resumen» + una hoja por tabla, con filtros, colores y cabeceras congeladas) e impresión del resumen.
+
 ## Desarrollo
 ```bash
 npm install
