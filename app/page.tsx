@@ -10,6 +10,7 @@ import { ValidationModal } from "@/components/ValidationModal";
 import { exportExcel } from "@/lib/excel";
 import { exportPdf } from "@/lib/pdf";
 import { buildExecutive } from "@/lib/summary";
+import { parseConfigFile, safeFilename, WORKER_TIMEOUT_MS } from "@/lib/security";
 import { DEFAULT_OPTIONS, type CompareOptions, type CompareResult, type RunMeta, type SchemaSummary, type TableDiff, type WorkerOut } from "@/lib/types";
 
 export default function Home() {
@@ -26,12 +27,18 @@ export default function Home() {
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [dark, setDark] = useState(false);
   const worker = useRef<Worker | null>(null);
+  const watchdog = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const notify = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 4000); };
   useEffect(() => { setDark(document.documentElement.classList.contains("dark")); }, []);
   const toggleTheme = () => { const n = !dark; setDark(n); document.documentElement.classList.toggle("dark", n); try { localStorage.setItem("theme", n ? "dark" : "light"); } catch {} };
 
-  const stopWorker = () => { worker.current?.terminate(); worker.current = null; };
+  const stopWorker = () => { worker.current?.terminate(); worker.current = null; if (watchdog.current) clearTimeout(watchdog.current); };
+  /** Aborta el análisis si el worker deja de dar señales (archivo manipulado o demasiado pesado) */
+  const armWatchdog = () => {
+    if (watchdog.current) clearTimeout(watchdog.current);
+    watchdog.current = setTimeout(() => { stopWorker(); setProgress(null); setInspect(null); notify("El análisis se ha detenido por tardar demasiado. Prueba con archivos más pequeños.", false); }, WORKER_TIMEOUT_MS);
+  };
   const pick = (set: (f: File | null) => void) => (f: File | null) => { stopWorker(); setInspect(null); set(f); };
 
   /** Fase 1: lectura rápida de la estructura → modal de validación */
@@ -46,17 +53,18 @@ export default function Home() {
       worker.current = w;
       w.onmessage = (e: MessageEvent<WorkerOut>) => {
         const m = e.data;
-        if (m.type === "progress") setProgress({ pct: m.pct, label: m.label });
-        else if (m.type === "inspected") { setProgress(null); setInspect(m.summary); }
+        if (m.type === "progress") { setProgress({ pct: m.pct, label: m.label }); armWatchdog(); }
+        else if (m.type === "inspected") { setProgress(null); setInspect(m.summary); if (watchdog.current) clearTimeout(watchdog.current); }
         else if (m.type === "done") { setResult(m.result); setMeta({ ...names, generatedAt: new Date().toISOString() }); setProgress(null); notify("Comparación completada"); stopWorker(); }
-        else { setProgress(null); notify(`Error: ${m.message}. ¿El archivo está dañado, protegido con contraseña o es de un formato no soportado?`, false); stopWorker(); }
+        else { setProgress(null); notify(`Error: ${String(m.message).slice(0, 200)}. ¿El archivo está dañado, protegido con contraseña o es de un formato no soportado?`, false); stopWorker(); }
       };
       w.onerror = () => { setProgress(null); notify("Error inesperado (posible falta de memoria con archivos muy grandes).", false); };
+      armWatchdog();
       w.postMessage({ type: "inspect", a, b, options }, [a, b]);
     } catch { setProgress(null); notify("No se pudieron leer los archivos.", false); }
   }
   /** Fase 2: comparación completa de registros (tras confirmar) */
-  function continueCompare() { setInspect(null); setProgress({ pct: 0, label: "Iniciando comparación…" }); worker.current?.postMessage({ type: "compare", options }); }
+  function continueCompare() { armWatchdog(); setInspect(null); setProgress({ pct: 0, label: "Iniciando comparación…" }); worker.current?.postMessage({ type: "compare", options }); }
   function cancelInspect() { stopWorker(); setInspect(null); }
 
   const runMeta = (): RunMeta => meta ?? { fileA: fileA?.name ?? "A", fileB: fileB?.name ?? "B", generatedAt: new Date().toISOString() };
@@ -64,13 +72,13 @@ export default function Home() {
     try {
       setProgress({ pct: 100, label: "Generando informe…" });
       await new Promise((r) => setTimeout(r, 30)); // deja pintar el aviso antes del trabajo pesado
-      if (kind === "xlsx") await exportExcel(diffs, runMeta(), { includeUnchanged: unchanged }, `${name}.xlsx`);
-      else await exportPdf(diffs, runMeta(), kind === "pdf-compact" ? "compact" : "complete", `${name}.pdf`);
+      if (kind === "xlsx") await exportExcel(diffs, runMeta(), { includeUnchanged: unchanged }, `${safeFilename(name)}.xlsx`);
+      else await exportPdf(diffs, runMeta(), kind === "pdf-compact" ? "compact" : "complete", `${safeFilename(name)}.pdf`);
       notify("Informe descargado");
     } catch { notify("No se pudo generar el informe", false); } finally { setProgress(null); }
   };
   const saveCfg = () => { const u = URL.createObjectURL(new Blob([JSON.stringify(options, null, 2)], { type: "application/json" })); Object.assign(document.createElement("a"), { href: u, download: "config-comparacion.json" }).click(); };
-  const loadCfg = async (f: File) => { try { setOptions({ ...DEFAULT_OPTIONS, ...JSON.parse(await f.text()) }); notify("Configuración cargada"); } catch { notify("Archivo de configuración no válido", false); } };
+  const loadCfg = async (f: File) => { try { setOptions(await parseConfigFile(f)); notify("Configuración cargada"); } catch { notify("Archivo de configuración no válido", false); } };
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 p-4 md:p-8">

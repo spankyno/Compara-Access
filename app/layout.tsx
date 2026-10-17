@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Footer } from "@/components/Footer";
+import { safeJsonForScript } from "@/lib/security";
 import { AUTHOR, BLOG_URL, CONTACT_URL, HUB_URL, SITE_DESC, SITE_NAME, SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -65,7 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonForScript(jsonLd) }} />
       </head>
       <body className="flex min-h-screen flex-col">
         <div className="flex-1">{children}</div>

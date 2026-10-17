@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { AccessIcon } from "@/components/AccessIcon";
+import { safeJsonForScript } from "@/lib/security";
 import { AUTHOR, BLOG_URL, CONTACT_URL, HUB_URL, SITE_NAME, SITE_URL } from "@/lib/site";
 
 const title = "Acerca de";
@@ -52,7 +53,7 @@ const ld = {
 export default function AboutPage() {
   return (
     <main className="mx-auto max-w-3xl space-y-10 p-4 md:p-8">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonForScript(ld) }} />
       <nav aria-label="Migas de pan" className="text-sm text-slate-500"><Link href="/" className="hover:underline">Inicio</Link> / Acerca de</nav>
       <header className="space-y-4">
         <div className="flex items-center gap-3"><AccessIcon size={44} /><h1 className="text-2xl font-bold md:text-3xl">Acerca del comparador de bases de datos Access</h1></div>

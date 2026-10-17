@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
+import { validateAccessFile } from "@/lib/security";
 
 const fmtSize = (n: number) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.ceil(n / 1024)} KB`);
 export const WARN_BYTES = 150 * 1024 * 1024;
@@ -7,7 +8,13 @@ export const WARN_BYTES = 150 * 1024 * 1024;
 export function Dropzone({ label, file, onFile }: { label: string; file: File | null; onFile: (f: File | null) => void }) {
   const ref = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
-  const accept = (f?: File) => { if (f && /\.(accdb|mdb)$/i.test(f.name)) onFile(f); else if (f) alert("Formato no válido: usa un archivo .accdb o .mdb"); };
+  const [error, setError] = useState<string | null>(null);
+  const accept = async (f?: File) => {
+    if (!f) return;
+    const problem = await validateAccessFile(f); // extensión, tamaño y cabecera Jet/ACE
+    setError(problem);
+    if (!problem) onFile(f);
+  };
   return (
     <div
       onClick={() => ref.current?.click()}
@@ -27,6 +34,7 @@ export function Dropzone({ label, file, onFile }: { label: string; file: File | 
           <button className="text-xs text-red-600 underline" onClick={(e) => { e.stopPropagation(); onFile(null); }}>Quitar</button>
         </>
       ) : <div className="text-xs text-slate-500">Arrastra un .accdb / .mdb o haz clic para elegir</div>}
+      {error && <div role="alert" className="text-xs text-red-600">{error}</div>}
     </div>
   );
 }

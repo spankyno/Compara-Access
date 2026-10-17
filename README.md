@@ -49,3 +49,8 @@ npm run typecheck
 - Seguimiento: script del dashboard cargado con `next/script` en el layout.
 - Tras desplegar, envía `https://compara-access.vercel.app/sitemap.xml` en Google Search Console
   y valida las vistas previas con el depurador de Facebook y el Card Validator de X.
+
+## Seguridad
+Consulta `SEGURIDAD.md` (informe de auditoría). Resumen: dependencias actualizadas, cabeceras HTTP y CSP
+(`next.config.mjs`), validación de archivos y de configuración (`lib/security.ts`), límites y *watchdog* en el worker.
+Si la CSP bloquea algo en tu despliegue, define `CSP_REPORT_ONLY=1` en Vercel para ver los avisos sin bloquear.

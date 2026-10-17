@@ -1,4 +1,5 @@
 import MDBReader from "mdb-reader";
+import { MAX_ROWS_PER_DB } from "./security";
 import type { Cell, Meta, Row, Snapshot } from "./types";
 
 /** Convierte cualquier valor devuelto por mdb-reader a un tipo simple y comparable */
@@ -25,10 +26,13 @@ export function readAccess(
   const reader = new MDBReader(buffer);
   const names = reader.getTableNames({ normalTables: true, systemTables: false, linkedTables: false });
   const snap: Snapshot = {};
+  let totalRows = 0;
   names.forEach((name, i) => {
     onTable?.(name, i, names.length);
     if (skipTable?.(name)) return;
     const table = reader.getTable(name);
+    totalRows += table.rowCount;
+    if (totalRows > MAX_ROWS_PER_DB) throw new Error(`La base de datos supera el límite de ${MAX_ROWS_PER_DB.toLocaleString("es-ES")} registros`);
     const columns = table.getColumns().map((c) => ({ name: c.name, type: String(c.type) }));
     const rows: Row[] = table.getData().map((r) => {
       const out: Row = {};

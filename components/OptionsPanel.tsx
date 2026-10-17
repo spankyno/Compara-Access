@@ -1,11 +1,12 @@
 "use client";
 import type { CompareOptions } from "@/lib/types";
+import { isSafeKey } from "@/lib/security";
 
 const csv = (a: string[]) => a.join(", ");
 const parse = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
 /** Formato de claves manuales: una por línea → Tabla=col1,col2 */
 const pkToText = (m: CompareOptions["pkOverrides"]) => Object.entries(m).map(([t, c]) => `${t}=${c.join(",")}`).join("\n");
-const textToPk = (s: string) => Object.fromEntries(s.split("\n").map((l) => l.split("=")).filter((p) => p.length === 2 && p[0].trim()).map(([t, c]) => [t.trim(), parse(c)]));
+const textToPk = (s: string) => Object.fromEntries(s.split("\n").map((l) => l.split("=")).filter((p) => p.length === 2 && p[0].trim() && isSafeKey(p[0].trim())).map(([t, c]) => [t.trim(), parse(c).filter(isSafeKey)]));
 
 export function OptionsPanel({ value, onChange, onSave, onLoad }: { value: CompareOptions; onChange: (o: CompareOptions) => void; onSave: () => void; onLoad: (f: File) => void }) {
   const set = (p: Partial<CompareOptions>) => onChange({ ...value, ...p });
